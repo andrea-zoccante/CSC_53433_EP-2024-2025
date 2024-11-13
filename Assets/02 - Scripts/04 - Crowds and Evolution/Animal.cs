@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Linq;
 
 public class Animal : MonoBehaviour
 {
@@ -25,6 +26,11 @@ public class Animal : MonoBehaviour
     public float stepAngle = 10.0f;
     public int nEyes = 5;
 
+    [Header("Sensor - Smell")]
+    public float maxSmellRange = 15.0f;
+    public float smellAngle = 360.0f;
+    public int nNose = 20;
+
     private int[] networkStruct;
     private SimpleNeuralNet brain = null;
 
@@ -37,6 +43,7 @@ public class Animal : MonoBehaviour
     // Animal.
     private Transform tfm;
     private float[] vision;
+    private float[] smell;
 
     // Genetic alg.
     private GeneticAlgo genetic_algo = null;
@@ -48,7 +55,8 @@ public class Animal : MonoBehaviour
     {
         // Network: 1 input per receptor, 1 output per actuator.
         vision = new float[nEyes];
-        networkStruct = new int[] { nEyes, 5, 1 };
+        smell = new float[nNose];
+        networkStruct = new int[] { nEyes + nNose, 5, 1 };
         energy = maxEnergy;
         tfm = transform;
 
@@ -104,9 +112,10 @@ public class Animal : MonoBehaviour
 
         // 1. Update receptor.
         UpdateVision();
+        UpdateSmell();
 
         // 2. Use brain.
-        float[] output = brain.getOutput(vision);
+        float[] output = brain.getOutput(vision.Concat(smell).ToArray());
 
         // 3. Act using actuators.
         float angle = (output[0] * 2.0f - 1.0f) * maxAngle;
@@ -128,6 +137,8 @@ public class Animal : MonoBehaviour
             float sx = tfm.position.x * ratio.x;
             float sy = tfm.position.z * ratio.y;
             vision[i] = 1.0f;
+
+            Vector3 rayDirection = forwardAnimal * maxVision;
 
             // Interate over vision length.
             for (float distance = 1.0f; distance < maxVision; distance += 0.5f)
@@ -151,7 +162,54 @@ public class Animal : MonoBehaviour
                     break;
                 }
             }
+
+            // Draw the vision ray for this eye
+            Debug.DrawRay(tfm.position, rayDirection, Color.green);
         }
+    }
+
+    private void UpdateSmell()
+    {
+        float startingAngle = -((float)nNose / 2.0f) * smellAngle;
+        Vector2 ratio = detailSize / terrainSize;
+
+        for (int i = 0; i < nNose; i++)
+        {
+            Quaternion rotAnimal = tfm.rotation * Quaternion.Euler(0.0f, startingAngle + (smellAngle * i), 0.0f);
+            Vector3 forwardAnimal = rotAnimal * Vector3.forward;
+            float sx = tfm.position.x * ratio.x;
+            float sy = tfm.position.z * ratio.y;
+            smell[i] = 1.0f;
+
+            Vector3 rayDirection = forwardAnimal * maxSmellRange;
+
+            // Interate over vision length.
+            for (float distance = 1.0f; distance < maxSmellRange; distance += 0.5f)
+            {
+                // Position where we are looking at.
+                float px = (sx + (distance * forwardAnimal.x * ratio.x));
+                float py = (sy + (distance * forwardAnimal.z * ratio.y));
+
+                if (px < 0)
+                    px += detailSize.x;
+                else if (px >= detailSize.x)
+                    px -= detailSize.x;
+                if (py < 0)
+                    py += detailSize.y;
+                else if (py >= detailSize.y)
+                    py -= detailSize.y;
+
+                if ((int)px >= 0 && (int)px < details.GetLength(1) && (int)py >= 0 && (int)py < details.GetLength(0) && details[(int)py, (int)px] > 0)
+                {
+                    smell[i] = distance / maxSmellRange;
+                    break;
+                }
+            }
+
+            // Draw the vision ray for this eye
+            Debug.DrawRay(tfm.position, rayDirection, Color.red);
+        }
+
     }
 
     public void Setup(CustomTerrain ct, GeneticAlgo ga)
