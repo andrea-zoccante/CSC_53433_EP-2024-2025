@@ -551,7 +551,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 6570
   m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_BoundingSphereOverride: {x: 7.2059745e+31, y: 1.4e-43, z: 4e-45, w: 0}
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ShadowRadius: 0
@@ -692,7 +692,10 @@ GameObject:
   - component: {fileID: 374040435}
   - component: {fileID: 374040440}
   - component: {fileID: 374040441}
-  - component: {fileID: 374040442}
+  - component: {fileID: 374040444}
+  - component: {fileID: 374040443}
+  - component: {fileID: 374040445}
+  - component: {fileID: 374040446}
   m_Layer: 0
   m_Name: Terrain
   m_TagString: Ground
@@ -831,7 +834,39 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 04d79b8a3cb88e74b8f6e5ec9aaa2b16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &374040442
+--- !u!114 &374040443
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 374040426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1b8f0bea1be745f18bc9508997e9e72, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  height: 10
+  scale: 0.1
+--- !u!114 &374040444
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 374040426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f76d144d70a84ddbb6d2bab28fa50bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  erosionSteps: 1
+  initialWaterAmount: 1
+  sedimentCapacity: 0.1
+  erosionRate: 0.05
+  depositionRate: 0.02
+  minSlope: 0.01
+--- !u!114 &374040445
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -843,8 +878,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 753e3da5facd59b4b8708b36201ce8ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  scale: 100
-  amplitude: 100
+  scale: 3
+  amplitude: 10
+  incrementFactor: 0.1
+--- !u!114 &374040446
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 374040426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d678b07e127305488c4c4c32de281d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &534669902
 GameObject:
   m_ObjectHideFlags: 0
