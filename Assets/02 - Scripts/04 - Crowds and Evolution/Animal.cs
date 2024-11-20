@@ -27,9 +27,14 @@ public class Animal : MonoBehaviour
     public int nEyes = 5;
 
     [Header("Sensor - Smell")]
-    public float maxSmellRange = 15.0f;
+    public float maxSmellRange = 5.0f;
     public float smellAngle = 360.0f;
     public int nNose = 20;
+
+    [Header("Reproduction")]
+    public float failCost = 2.0f;
+    public float successCost = 1.0f;
+    public float successThresh = 5.0f;
 
     private int[] networkStruct;
     private SimpleNeuralNet brain = null;
@@ -56,7 +61,7 @@ public class Animal : MonoBehaviour
         // Network: 1 input per receptor, 1 output per actuator.
         vision = new float[nEyes];
         smell = new float[nNose];
-        networkStruct = new int[] { nEyes + nNose, 5, 1 };
+        networkStruct = new int[] { nEyes + nNose, 10, 5, 2 };
         energy = maxEnergy;
         tfm = transform;
 
@@ -120,6 +125,8 @@ public class Animal : MonoBehaviour
         // 3. Act using actuators.
         float angle = (output[0] * 2.0f - 1.0f) * maxAngle;
         tfm.Rotate(0.0f, angle, 0.0f);
+
+        
     }
 
     /// <summary>
