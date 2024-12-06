@@ -48,11 +48,11 @@ public class FootStepper : MonoBehaviour
 
         // START TODO ###################
 
-        // float distFromHome = ...
-        // float angleFromHome = ...
+        float distFromHome = Vector3.Distance(transform.position, homeTransform.position);
+        float angleFromHome = Quaternion.Angle(transform.rotation, homeTransform.rotation);
 
         // Change condition!
-        if (false)
+        if (distFromHome > distanceThreshold || angleFromHome > angleThreshold)
         {
             // END TODO ###################
 
@@ -103,13 +103,13 @@ public class FootStepper : MonoBehaviour
 
         // START TODO ###################
 
-        // Vector3 raycastOrigin = ...
-
-        // if (Physics.Raycast(...))
-        // {
-        //  ...
-        //  return true;
-        // }
+        Vector3 raycastOrigin = homeTransform.position + overshootVector + Vector3.up * heightOffset;
+        if (Physics.Raycast(raycastOrigin, Vector3.down, out RaycastHit hit, Mathf.Infinity, groundRaycastMask))
+        {
+            endPos = hit.point;
+            endNormal = hit.normal;
+            return true;
+        }
 
         // END TODO ###################
 
@@ -162,9 +162,13 @@ public class FootStepper : MonoBehaviour
              */
 
             // START TODO ###################
+            Vector3 controlPoint = Vector3.Lerp(startPos, endPos, 0.5f) + Vector3.up * heightOffset;
 
-            // transform.position = ...
+            Vector3 bezierPosition = (1 - normalizedTime) * (1 - normalizedTime) * startPos 
+                                + 2 * (1 - normalizedTime) * normalizedTime * controlPoint 
+                                + normalizedTime * normalizedTime * endPos;
 
+            transform.position = bezierPosition;
             // END TODO ###################
 
             /*
@@ -173,7 +177,7 @@ public class FootStepper : MonoBehaviour
 
             // START TODO ###################
 
-            // transform.rotation = ...
+            transform.rotation = Quaternion.Slerp(startRot, endRot, normalizedTime); // SLERP
 
             // END TODO ###################
 

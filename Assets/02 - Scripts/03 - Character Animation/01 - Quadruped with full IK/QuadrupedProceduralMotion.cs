@@ -154,7 +154,7 @@ public class QuadrupedProceduralMotion : MonoBehaviour
         // The ray information gives you where you hit and the normal of the terrain in that location.
         if (Physics.Raycast(raycastOrigin, -transform.up, out RaycastHit hit, Mathf.Infinity))
         {
-            if (hit.transform.gameObject.layer == LayerMask.NameToLayer("Ground"))
+            if (hit.transform.gameObject.tag == "Ground")
             {
                 posHit = hit.point;
                 distanceHit = hit.distance;
@@ -171,8 +171,13 @@ public class QuadrupedProceduralMotion : MonoBehaviour
 
         // START TODO ###################
 
-        // hips.position = ...
-        // hips.rotation = ...
+        // Adjust hips position to align with the terrain height.
+        Vector3 targetPosition = new Vector3(hips.position.x, posHit.y + constantHipsPosition.y, hips.position.z);
+        hips.position = Vector3.Lerp(hips.position, targetPosition, heightAcceleration * Time.deltaTime);
+
+        // Adjust hips rotation to align with the terrain slope.
+        Quaternion targetRotation = Quaternion.FromToRotation(Vector3.up, normalTerrain) * Quaternion.Euler(constantHipsRotation);
+        hips.rotation = Quaternion.Slerp(hips.rotation, targetRotation, heightAcceleration * Time.deltaTime);
 
         // END TODO ###################
     }
@@ -233,10 +238,17 @@ public class QuadrupedProceduralMotion : MonoBehaviour
 
         // START TODO ###################
 
-        // goalWorldLookDir = ...
-        // goalLocalLookDir = ...
+        // Calculate the world-space direction to the goal.
+        goalWorldLookDir = goal.position - headBone.position;
+        goalWorldLookDir.Normalize(); // Normalize for direction only.
 
-        Quaternion targetLocalRotation = Quaternion.identity; // Change!
+        // Transform the world-space direction to local space relative to the head's parent.
+        goalLocalLookDir = headBone.parent.InverseTransformDirection(goalWorldLookDir);
+
+        // Define the target local rotation for the head to look at the goal.
+        Quaternion targetLocalRotation = Quaternion.LookRotation(goalLocalLookDir, Vector3.up);
+
+        // Quaternion targetLocalRotation = Quaternion.identity; // Change!
 
         // END TODO ###################
 
