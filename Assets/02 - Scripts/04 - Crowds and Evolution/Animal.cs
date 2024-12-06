@@ -14,11 +14,15 @@ public class Animal : MonoBehaviour
     public float swapStrength = 10.0f;
     public float mutateStrength = 0.5f;
     public float maxAngle = 10.0f;
+    public float lifeSuccess = 0.0f;
+    public int timeAlive = 0;
+    public int pubertyAge = 10;
 
     [Header("Energy parameters")]
     public float maxEnergy = 10.0f;
     public float lossEnergy = 0.1f;
     public float gainEnergy = 10.0f;
+    public float reprodEnergy = 2.0f;
     private float energy;
 
     [Header("Sensor - Vision")]
@@ -35,9 +39,13 @@ public class Animal : MonoBehaviour
     public float failCost = 2.0f;
     public float successCost = 1.0f;
     public float successThresh = 5.0f;
+    public int gender = 0;
 
     private int[] networkStruct;
     private SimpleNeuralNet brain = null;
+
+    private int[] networkReprodStruct;
+    private SimpleNeuralNet brainReprod = null;
 
     // Terrain.
     private CustomTerrain terrain = null;
@@ -62,6 +70,7 @@ public class Animal : MonoBehaviour
         vision = new float[nEyes];
         smell = new float[nNose];
         networkStruct = new int[] { nEyes + nNose, 10, 5, 2 };
+        networkReprodStruct = new int[] { 2, 5, 1 };
         energy = maxEnergy;
         tfm = transform;
 
@@ -73,10 +82,14 @@ public class Animal : MonoBehaviour
     }
 
     void Update()
-    {
+    {   
+        timeAlive += 1;
+
         // In case something is not initialized...
         if (brain == null)
             brain = new SimpleNeuralNet(networkStruct);
+        if (brainReprod == null)
+            brainReprod = new SimpleNeuralNet(networkReprodStruct);
         if (terrain == null)
             return;
         if (details == null)
@@ -126,7 +139,7 @@ public class Animal : MonoBehaviour
         float angle = (output[0] * 2.0f - 1.0f) * maxAngle;
         tfm.Rotate(0.0f, angle, 0.0f);
 
-        
+        lifeSuccess = GetHealth() * timeAlive;
     }
 
     /// <summary>
@@ -219,10 +232,11 @@ public class Animal : MonoBehaviour
 
     }
 
-    public void Setup(CustomTerrain ct, GeneticAlgo ga)
+    public void Setup(CustomTerrain ct, GeneticAlgo ga, int inGender)
     {
         terrain = ct;
         genetic_algo = ga;
+        gender = inGender;
         UpdateSetup();
     }
 
@@ -234,19 +248,41 @@ public class Animal : MonoBehaviour
         details = terrain.getDetails();
     }
 
-    public void InheritBrain(SimpleNeuralNet other, bool mutate)
+    public void InheritBrain(SimpleNeuralNet other, SimpleNeuralNet reprod, bool mutate)
     {
         brain = new SimpleNeuralNet(other);
+        brainReprod = new SimpleNeuralNet(reprod);
         if (mutate)
             brain.mutate(swapRate, mutateRate, swapStrength, mutateStrength);
+            reprod.mutate(swapRate, mutateRate, swapStrength, mutateStrength);
     }
     public SimpleNeuralNet GetBrain()
     {
         return brain;
+    }
+
+    public SimpleNeuralNet GetBrainReprod()
+    {
+        return brainReprod;
     }
     public float GetHealth()
     {
         return energy / maxEnergy;
     }
 
+    public bool ShouldReproduceWith(float life_success) {
+        if (timeAlive < pubertyAge) { return false; }
+
+        // Concatenate the animal's energy with the life_success argument.
+        float[] input = new float[] { energy / maxEnergy, life_success };
+
+        float[] output = brainReprod.getOutput(input);
+        float sigmoidOutput = 1.0f / (1.0f + Mathf.Exp(-output[0]));
+
+        return sigmoidOutput > 0.5f;
+    }
+
+    public void ReduceEnergy(float energyLoss) {
+        energy -= energyLoss;
+    }
 }

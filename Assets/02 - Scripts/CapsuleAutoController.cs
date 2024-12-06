@@ -18,7 +18,7 @@ public class CapsuleAutoController : MonoBehaviour {
         height = terrain.terrainData.size.z;
     }
 
-    void Update() {
+    void Update() { // TODO:: Make it so that they dont traverse accross the map if they get to the border
         Vector3 scale = terrain.terrainData.heightmapScale;
         Transform tfm = transform;
         Vector3 v = tfm.rotation * Vector3.forward * max_speed;
