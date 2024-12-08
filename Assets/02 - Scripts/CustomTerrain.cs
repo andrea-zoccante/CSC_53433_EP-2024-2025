@@ -159,11 +159,20 @@ public class CustomTerrain : MonoBehaviour {
     }
 
     // Set the grid height for a node
-    public void set(int x, int z, float val) {
+    /*public void set(int x, int z, float val) {
         x = (x + heightmap_width) % heightmap_width;
         z = (z + heightmap_height) % heightmap_height;
         heightmap_data[z, x] = val / terrain_data.heightmapScale.y;
+    }*/
+
+    public void set(int x, int z, float val) {
+        x = Math.Clamp(x, 0, heightmap_width - 1);
+        z = Math.Clamp(z, 0, heightmap_height - 1);
+
+        // Update the heightmap data
+        heightmap_data[z, x] = val / terrain_data.heightmapScale.y;
     }
+
     public void set(float x, float z, float val) {
         set((int)x, (int)z, val);
     }
