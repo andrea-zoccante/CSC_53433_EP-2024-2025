@@ -296,7 +296,7 @@ public class Animal : MonoBehaviour
     }
 
     public bool ShouldReproduceWith(float life_success) {
-        // if (timeAlive < pubertyAge) { return false; }
+        if (timeAlive < pubertyAge) { return false; }
 
         // Concatenate the animal's energy with the life_success argument.
         float[] input = new float[] { energy / maxEnergy, life_success };

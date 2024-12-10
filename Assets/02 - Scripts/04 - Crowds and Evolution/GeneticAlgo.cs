@@ -87,11 +87,12 @@ public class GeneticAlgo : MonoBehaviour
             float worldX = x / detail_sz.x * terrain.terrainData.size.x;
             float worldZ = y / detail_sz.y * terrain.terrainData.size.z;
 
-            // Get the height at this position
+            // Get the height and steepness at this position
             float height = customTerrain.getInterp(worldX, worldZ);
+            float steepness = customTerrain.getSteepness(worldX, worldZ);
 
-            // Only place a resource if the height is between 25 and 35
-            if (height >= 25.0f && height <= 35.0f) {
+            // Only place a resource if the height is between 25 and 35 and steepness is less than 30 degrees
+            if (height >= 25.0f && height <= 35.0f && steepness < 30.0f) {
                 details[y, x] = 1; // Place resource
                 currentGrowth -= 1.0f;
             }
