@@ -13,7 +13,7 @@ public class Animal : MonoBehaviour
     public float mutateRate = 0.01f;
     public float swapStrength = 10.0f;
     public float mutateStrength = 0.5f;
-    public float maxAngle = 10.0f;
+    public float maxAngle = 50.0f;
     public float lifeSuccess = 0.0f;
     public int timeAlive = 0;
     public int pubertyAge = 10;
@@ -56,6 +56,7 @@ public class Animal : MonoBehaviour
     // Animal.
     private Transform tfm;
     private float[] vision;
+    private float[] visionSteepness;
     private float[] smell;
 
     // Genetic alg.
@@ -68,8 +69,9 @@ public class Animal : MonoBehaviour
     {
         // Network: 1 input per receptor, 1 output per actuator.
         vision = new float[nEyes];
+        visionSteepness = new float[nEyes];
         smell = new float[nNose];
-        networkStruct = new int[] { nEyes + nNose, 10, 5, 2 };
+        networkStruct = new int[] { nEyes + nEyes + nNose, 10, 5, 2 };
         networkReprodStruct = new int[] { 2, 5, 1 };
         energy = maxEnergy;
         tfm = transform;
@@ -81,63 +83,70 @@ public class Animal : MonoBehaviour
             mat = renderer.material;
     }
 
-    void Update()
-    {   
+    void Update() {
         timeAlive += 1;
 
-        // In case something is not initialized...
-        if (brain == null)
-            brain = new SimpleNeuralNet(networkStruct);
-        if (brainReprod == null)
-            brainReprod = new SimpleNeuralNet(networkReprodStruct);
-        if (terrain == null)
-            return;
-        if (details == null)
-        {
+        // Ensure necessary components are initialized
+        if (brain == null) brain = new SimpleNeuralNet(networkStruct);
+        if (brainReprod == null) brainReprod = new SimpleNeuralNet(networkReprodStruct);
+        if (terrain == null) return;
+        if (details == null) {
             UpdateSetup();
             return;
         }
 
-        // Retrieve animal location in the heighmap
+        // Retrieve animal location in the heightmap
         int dx = (int)((tfm.position.x / terrainSize.x) * detailSize.x);
         int dy = (int)((tfm.position.z / terrainSize.y) * detailSize.y);
 
-        // For each frame, we lose lossEnergy
+        // Energy loss and eating logic
         energy -= lossEnergy;
-
-        // If the animal is located in the dimensions of the terrain and over a grass position (details[dy, dx] > 0), it eats it, gain energy and spawn an offspring.
-        if ((dx >= 0) && dx < (details.GetLength(1)) && (dy >= 0) && (dy < details.GetLength(0)) && details[dy, dx] > 0)
-        {
-            // Eat (remove) the grass and gain energy.
+        if ((dx >= 0) && dx < details.GetLength(1) && (dy >= 0) && dy < details.GetLength(0) && details[dy, dx] > 0) {
             details[dy, dx] = 0;
             energy += gainEnergy;
-            if (energy > maxEnergy)
-                energy = maxEnergy;
-
+            if (energy > maxEnergy) energy = maxEnergy;
             genetic_algo.addOffspring(this);
         }
 
-        // If the energy is below 0, the animal dies.
-        if (energy < 0)
-        {
+        // If energy is below zero, the animal dies
+        if (energy < 0) {
             energy = 0.0f;
             genetic_algo.removeAnimal(this);
+            return;
         }
 
-        // Update the color of the animal as a function of the energy that it contains.
-        if (mat != null)
-            mat.color = Color.white * (energy / maxEnergy);
+        // Check terrain steepness at the current position
+        float steepness = terrain.getSteepness(tfm.position.x, tfm.position.z);
+        float steepnessThreshold = maxAngle; // Define a threshold for tolerable steepness
 
-        // 1. Update receptor.
+        // Reduce health proportionally to how much steepness exceeds the threshold
+        if (steepness > steepnessThreshold) {
+            float excessSteepness = steepness - steepnessThreshold;
+            float healthLoss = excessSteepness * 0.1f; // Scale factor for health loss
+            energy -= healthLoss;
+
+            // If energy drops below zero due to steepness, the animal dies
+            if (energy <= 0) {
+                energy = 0.0f;
+                genetic_algo.removeAnimal(this);
+                return;
+            }
+        }
+
+        // Update color based on energy
+        if (mat != null) mat.color = Color.white * (energy / maxEnergy);
+
+        // Update vision and smell receptors
         UpdateVision();
         UpdateSmell();
 
-        // 2. Use brain.
-        float[] output = brain.getOutput(vision.Concat(smell).ToArray());
-
-        // 3. Act using actuators.
+        // Neural network output for movement
+        float[] output = brain.getOutput(vision.Concat(visionSteepness).Concat(smell).ToArray());
         float angle = (output[0] * 2.0f - 1.0f) * maxAngle;
+
+        // Rotate and move forward
         tfm.Rotate(0.0f, angle, 0.0f);
+        tfm.Translate(tfm.forward * Time.deltaTime);
 
         lifeSuccess = GetHealth() * timeAlive;
     }
@@ -145,46 +154,62 @@ public class Animal : MonoBehaviour
     /// <summary>
     /// Calculate distance to the nearest food resource, if there is any.
     /// </summary>
-    private void UpdateVision()
-    {
+    private void UpdateVision() {
         float startingAngle = -((float)nEyes / 2.0f) * stepAngle;
         Vector2 ratio = detailSize / terrainSize;
 
-        for (int i = 0; i < nEyes; i++)
-        {
+        // Initialize vision and visionSteepness arrays
+        for (int i = 0; i < nEyes; i++) {
+            vision[i] = 1.0f; // Default to maximum vision range
+            visionSteepness[i] = 0.0f; // Default to no steepness
+        }
+
+        for (int i = 0; i < nEyes; i++) {
             Quaternion rotAnimal = tfm.rotation * Quaternion.Euler(0.0f, startingAngle + (stepAngle * i), 0.0f);
             Vector3 forwardAnimal = rotAnimal * Vector3.forward;
             float sx = tfm.position.x * ratio.x;
             float sy = tfm.position.z * ratio.y;
-            vision[i] = 1.0f;
 
-            Vector3 rayDirection = forwardAnimal * maxVision;
+            float totalSteepness = 0.0f;
+            int steepnessCount = 0;
 
-            // Interate over vision length.
-            for (float distance = 1.0f; distance < maxVision; distance += 0.5f)
-            {
-                // Position where we are looking at.
-                float px = (sx + (distance * forwardAnimal.x * ratio.x));
-                float py = (sy + (distance * forwardAnimal.z * ratio.y));
+            // Iterate over vision length
+            for (float distance = 1.0f; distance < maxVision; distance += 0.5f) {
+                // Position where we are looking at
+                float px = sx + (distance * forwardAnimal.x * ratio.x);
+                float py = sy + (distance * forwardAnimal.z * ratio.y);
 
-                if (px < 0)
-                    px += detailSize.x;
-                else if (px >= detailSize.x)
-                    px -= detailSize.x;
-                if (py < 0)
-                    py += detailSize.y;
-                else if (py >= detailSize.y)
-                    py -= detailSize.y;
+                // Wrap around terrain edges
+                if (px < 0) px += detailSize.x;
+                else if (px >= detailSize.x) px -= detailSize.x;
+                if (py < 0) py += detailSize.y;
+                else if (py >= detailSize.y) py -= detailSize.y;
 
-                if ((int)px >= 0 && (int)px < details.GetLength(1) && (int)py >= 0 && (int)py < details.GetLength(0) && details[(int)py, (int)px] > 0)
-                {
-                    vision[i] = distance / maxVision;
-                    break;
+                // Check if within terrain bounds
+                if ((int)px >= 0 && (int)px < details.GetLength(1) && (int)py >= 0 && (int)py < details.GetLength(0)) {
+                    // Record distance to nearest food
+                    if (details[(int)py, (int)px] > 0) {
+                        vision[i] = distance / maxVision;
+                        break;
+                    }
+
+                    // Calculate interpolated steepness at this point
+                    float worldX = px / ratio.x;
+                    float worldZ = py / ratio.y;
+                    float currentSteepness = terrain.getSteepness(worldX, worldZ);
+
+                    totalSteepness += currentSteepness + 0.01f;
+                    steepnessCount++;
                 }
             }
 
+            // Calculate average steepness for this eye
+            if (steepnessCount > 0) {
+                visionSteepness[i] = totalSteepness / steepnessCount / maxAngle; // Normalize by maxAngle
+            }
+
             // Draw the vision ray for this eye
-            Debug.DrawRay(tfm.position, rayDirection, Color.green);
+            Debug.DrawRay(tfm.position, forwardAnimal * maxVision, Color.green);
         }
     }
 
@@ -271,7 +296,7 @@ public class Animal : MonoBehaviour
     }
 
     public bool ShouldReproduceWith(float life_success) {
-        if (timeAlive < pubertyAge) { return false; }
+        // if (timeAlive < pubertyAge) { return false; }
 
         // Concatenate the animal's energy with the life_success argument.
         float[] input = new float[] { energy / maxEnergy, life_success };

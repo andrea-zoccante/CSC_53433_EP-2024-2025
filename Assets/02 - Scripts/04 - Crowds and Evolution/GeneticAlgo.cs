@@ -74,18 +74,29 @@ public class GeneticAlgo : MonoBehaviour
     /// <summary>
     /// Method to place grass or other resource in the terrain.
     /// </summary>
-    public void UpdateResources()
-    {
+    public void UpdateResources() {
         Vector2 detail_sz = customTerrain.detailSize();
         int[,] details = customTerrain.getDetails();
         currentGrowth += vegetationGrowthRate;
-        while (currentGrowth > 1.0f)
-        {
+
+        while (currentGrowth > 1.0f) {
             int x = (int)(UnityEngine.Random.value * detail_sz.x);
             int y = (int)(UnityEngine.Random.value * detail_sz.y);
-            details[y, x] = 1;
-            currentGrowth -= 1.0f;
+
+            // Convert detail coordinates to world coordinates
+            float worldX = x / detail_sz.x * terrain.terrainData.size.x;
+            float worldZ = y / detail_sz.y * terrain.terrainData.size.z;
+
+            // Get the height at this position
+            float height = customTerrain.getInterp(worldX, worldZ);
+
+            // Only place a resource if the height is between 25 and 35
+            if (height >= 25.0f && height <= 35.0f) {
+                details[y, x] = 1; // Place resource
+                currentGrowth -= 1.0f;
+            }
         }
+
         customTerrain.saveDetails();
         SaveToCSV();
     }
